@@ -23,6 +23,10 @@ import types
 # def my_macro():
 # 	pass
 
+def getoperators(underscore=True):
+	return ((name, '__'+name+'__', op) for name, op in operator.__dict__.iteritems()\
+		if name[0]!='_')
+
 class ItError(Exception): pass
 
 class It(object):
@@ -39,11 +43,11 @@ True
 		return lambda y: getattr(y, v)
 	# def __getitem__(self, v):		
 	# 	return lambda y: y[v]
-for op in (i for i in dir(operator) if '__' not in i):
+for opname, opattr, op in getoperators():
 	def opfact(op):		
 		return lambda self, *args: \
 			lambda y: op(y, *(i if i is not self else y for i in args))
-	setattr(It, ''.join(['__', op, '__']), opfact(getattr(operator, op)))
+	setattr(It, opattr, opfact(op))
 
 it = It()
 
@@ -65,15 +69,11 @@ class Zipw(object):
 [2, 3, 4]
 	"""
 	def __init__(self):
-		for op in dir(operator):
-			if '__' in op:
-				continue
-			newop = getattr(operator, op)
-			setattr(Zipw, op, Infix(lambda La, Lb, op=newop:\
+		for opname, opattr, op in getoperators(underscore=False):
+			setattr(Zipw, opname, Infix(lambda La, Lb, op=op: \
 								 [op(a, b) for a, b in zip(La, Lb)]))
-zipw = Zipw()
 
-# (_1, _2, _3, _4, _5) = tuple(('partial', i) for i in range(5))
+zipw = Zipw()
 
 # Used for partial application when using |pipe|
 class PartialArg(object):
@@ -96,6 +96,7 @@ class Log:
 
 def PipeLogger(f):
 	if Log.enableLogging:
+		@wraps(f)
 		def func(x, arg):
 			res = f(x, arg)
 			nl = '\n' if Log.previous is not x else ''
@@ -110,7 +111,7 @@ def PipeLogger(f):
 @Infix
 @PipeLogger
 def pipe(x, arg):
-	""" f(g(x)) <=> x |pipe| f |pipe| g
+	""" f(g(x)) <=> x |pipe| f |pipe| g α
 For multi-argument functions, use "S-Expression" form where each variable gets
 __ i.e: ('map', it+1, __)
 
