@@ -32,20 +32,18 @@ class It(object):
 True
 >>> (lambda s: s.upper())('lol') == it.upper('lol')()
 True
->>> it*it(5) == 25
+>>> (it*it)(5) == 25
 True
 	"""
 	def __getattr__(self, v):
-		if isinstance(v, int):
-			return self[v]
 		return lambda y: getattr(y, v)
-	def __getitem__(self, v):		
-		return lambda y: y[v]
-
-for op in dir(operator):
-	if '__' not in op:
-		setattr(It, ''.join(['__', op, '__']), lambda self, op=op: lambda y, *args: \
-			getattr(operator, op)(y, *(i if i is not self else y for i in args)))
+	# def __getitem__(self, v):		
+	# 	return lambda y: y[v]
+for op in (i for i in dir(operator) if '__' not in i):
+	def opfact(op):		
+		return lambda self, *args: \
+			lambda y: op(y, *(i if i is not self else y for i in args))
+	setattr(It, ''.join(['__', op, '__']), opfact(getattr(operator, op)))
 
 it = It()
 
